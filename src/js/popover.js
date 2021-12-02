@@ -1,6 +1,8 @@
 export default class Popover {
   static registeredPopovers = new Map();
 
+  static registeredResizeEvents = new Map();
+
   static call(event) {
     const el = event.target;
     if (this.registeredPopovers.has(el)) {
@@ -14,6 +16,9 @@ export default class Popover {
     const popover = this.registeredPopovers.get(el);
     popover.remove();
     this.registeredPopovers.delete(el);
+    const listener = this.registeredResizeEvents.get(el);
+    window.removeEventListener('resize', listener);
+    this.registeredResizeEvents.delete(el);
   }
 
   static addPopover(el) {
@@ -36,34 +41,53 @@ export default class Popover {
     popover.setAttribute('data-position', position);
 
     setTimeout(() => {
-      this.setPosition(el, popover, position);
+      const { top, left } = this.getPopoverPosition(el, popover, position);
+      popover.style.top = top;
+      popover.style.left = left;
       popover.style.opacity = '1';
     });
 
     this.registeredPopovers.set(el, popover);
+    this.registerOnResizeListener(el, popover, position);
   }
 
-  static setPosition(el, popover, position) {
+  static registerOnResizeListener(el, popover, position) {
+    const listener = () => {
+      const { top, left } = this.getPopoverPosition(el, popover, position);
+      popover.style.top = top;
+      popover.style.left = left;
+      popover.style.opacity = '1';
+    };
+
+    window.addEventListener('resize', listener);
+    this.registeredResizeEvents.set(el, listener);
+  }
+
+  static getPopoverPosition(el, popover, position) {
     const elBoundingClientRect = el.getBoundingClientRect();
     const popoverBoundingClientRect = popover.getBoundingClientRect();
     const offset = 10;
+    let top;
+    let left;
     switch (position) {
       case 'left':
-        popover.style.top = `${elBoundingClientRect.y + (elBoundingClientRect.height - popoverBoundingClientRect.height) / 2}px`;
-        popover.style.left = `${(elBoundingClientRect.x - popoverBoundingClientRect.width) - offset}px`;
+        top = `${elBoundingClientRect.y + (elBoundingClientRect.height - popoverBoundingClientRect.height) / 2}px`;
+        left = `${(elBoundingClientRect.x - popoverBoundingClientRect.width) - offset}px`;
         break;
       case 'right':
-        popover.style.top = `${elBoundingClientRect.y + (elBoundingClientRect.height - popoverBoundingClientRect.height) / 2}px`;
-        popover.style.left = `${(elBoundingClientRect.x + elBoundingClientRect.width) + offset}px`;
+        top = `${elBoundingClientRect.y + (elBoundingClientRect.height - popoverBoundingClientRect.height) / 2}px`;
+        left = `${(elBoundingClientRect.x + elBoundingClientRect.width) + offset}px`;
         break;
       case 'bottom':
-        popover.style.top = `${elBoundingClientRect.y + elBoundingClientRect.height + offset}px`;
-        popover.style.left = `${elBoundingClientRect.x + (elBoundingClientRect.width - popoverBoundingClientRect.width) / 2}px`;
+        top = `${elBoundingClientRect.y + elBoundingClientRect.height + offset}px`;
+        left = `${elBoundingClientRect.x + (elBoundingClientRect.width - popoverBoundingClientRect.width) / 2}px`;
         break;
       default:
-        popover.style.top = `${elBoundingClientRect.y - popoverBoundingClientRect.height - offset}px`;
-        popover.style.left = `${elBoundingClientRect.x + (elBoundingClientRect.width - popoverBoundingClientRect.width) / 2}px`;
+        top = `${elBoundingClientRect.y - popoverBoundingClientRect.height - offset}px`;
+        left = `${elBoundingClientRect.x + (elBoundingClientRect.width - popoverBoundingClientRect.width) / 2}px`;
         break;
     }
+
+    return { top, left };
   }
 }
